@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Meu Financeiro</title>
+
+<!-- PWA -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#F7D9E3">
+<link rel="icon" href="/icons/favicon-32.png">
+
+<!-- iOS/iPadOS: o Safari não lê o manifest.json para exibir "Adicionar à Tela de Início",
+     por isso essas tags específicas são obrigatórias para instalação e tela cheia no iPhone/iPad -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Financeiro">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+
+
+  <div class="topbar">
+    <div>
+      <div class="greeting" id="greeting">Bom dia</div>
+      <h1>Meu Financeiro</h1>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <button id="btnSino" style="position:relative; background:var(--white); border:none; width:44px; height:44px; border-radius:50%; box-shadow:var(--shadow-soft); font-size:19px; cursor:pointer;">
+        🔔
+        <span id="sinoBadge" class="hidden" style="position:absolute; top:2px; right:2px; background:var(--red); color:#fff; font-size:10px; font-weight:800; min-width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center; padding:0 3px;">0</span>
+      </button>
+      <div class="avatar-dot">🌸</div>
+    </div>
+  </div>
+
+  <div id="painelNotificacoes" class="hidden" style="position:fixed; top:calc(76px + env(safe-area-inset-top)); right:18px; left:18px; max-width:420px; margin-left:auto; background:var(--white); border-radius:var(--radius-md); box-shadow:var(--shadow-lift); padding:16px; z-index:70; max-height:60vh; overflow-y:auto;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+      <strong style="font-family:'Fraunces',serif; font-size:16px;">Notificações</strong>
+      <button id="btnAtivarNotif" style="background:var(--stone); border:none; border-radius:999px; padding:6px 10px; font-size:11px; font-weight:700; cursor:pointer;">Ativar alertas</button>
+    </div>
+    <div id="listaNotificacoes"><div class="empty-note">Tudo em dia por aqui 🌸</div></div>
+  </div>
+
+  <div id="view-dashboard" class="view active">
+  <!-- HERO: saldo disponível -->
+  <div class="hero">
+    <div class="hero-label">Saldo disponível</div>
+    <div class="hero-row">
+      <div class="hero-value" id="saldoDisponivel">R$ 0,00</div>
+      <div class="ring-wrap">
+        <svg width="86" height="86">
+          <circle class="ring-bg" cx="43" cy="43" r="36"></circle>
+          <circle class="ring-fg" id="ringFg" cx="43" cy="43" r="36" stroke-dasharray="226" stroke-dashoffset="226"></circle>
+        </svg>
+        <div class="ring-center" id="ringLabel">0%</div>
+      </div>
+    </div>
+    <div class="hero-chips">
+      <div class="chip">💰 Em conta: <span id="chipConta">R$ 0,00</span></div>
+      <div class="chip">📈 Investido: <span id="chipInvestido">R$ 0,00</span></div>
+      <div class="chip">🐷 Caixinhas: <span id="chipCaixinhas">R$ 0,00</span></div>
+    </div>
+  </div>
+
+  <!-- MÉTRICAS -->
+  <div class="grid">
+    <div class="card">
+      <div class="icon">📅</div>
+      <div class="label">Contas a vencer</div>
+      <div class="value" id="mContasVencer">R$ 0,00</div>
+    </div>
+    <div class="card warn">
+      <div class="icon">⚠️</div>
+      <div class="label">Contas vencidas</div>
+      <div class="value" id="mContasVencidas">R$ 0,00</div>
+    </div>
+    <div class="card warn">
+      <div class="icon">📤</div>
+      <div class="label">Devo a pessoas</div>
+      <div class="value" id="mDevoOutros">R$ 0,00</div>
+    </div>
+    <div class="card good">
+      <div class="icon">📥</div>
+      <div class="label">Me devem</div>
+      <div class="value" id="mMeDevem">R$ 0,00</div>
+    </div>
+    <div class="card">
+      <div class="icon">💳</div>
+      <div class="label">Limite disponível</div>
+      <div class="value" id="mLimiteCartoes">R$ 0,00</div>
+    </div>
+    <div class="card">
+      <div class="icon">🏦</div>
+      <div class="label">Patrimônio total</div>
+      <div class="value" id="mPatrimonio">R$ 0,00</div>
+    </div>
+    <div class="card">
+      <div class="icon">🧾</div>
+      <div class="label">Gasto no mês</div>
+      <div class="value" id="mGastoMes">R$ 0,00</div>
+    </div>
+    <div class="card">
+      <div class="icon">💵</div>
+      <div class="label">Receita no mês</div>
+      <div class="value" id="mReceitaMes">R$ 0,00</div>
+    </div>
+  </div>
+
+  <!-- INSIGHTS (Inteligência financeira) -->
+  <div class="section" id="insightsSection">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Inteligência financeira</div>
+        <h2>Avisos pra você</h2>
+      </div>
+    </div>
+    <div class="panel" id="insightsPanel">
+      <div class="empty-note">Sem avisos por enquanto — continue registrando seus lançamentos 🌸</div>
+    </div>
+  </div>
+
+  <!-- GRÁFICOS -->
+  <div class="section">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Relatórios</div>
+        <h2>Como o dinheiro se move</h2>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="charts-grid">
+        <div>
+          <div class="empty-note" id="gastosEmptyNote">Gastos por categoria — sem lançamentos este mês ainda</div>
+          <div class="chart-box"><canvas id="chartGastos"></canvas></div>
+        </div>
+        <div>
+          <div class="empty-note" id="evolucaoEmptyNote">Evolução patrimonial — adicione contas e investimentos para ver a curva</div>
+          <div class="chart-box"><canvas id="chartEvolucao"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESUMO DO MÊS -->
+  <div class="section">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Este mês</div>
+        <h2>Resumo</h2>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="resumo-list" id="resumoList">
+        <div class="resumo-item"><span class="tag">✨ Tudo pronto</span><span class="amt">Comece adicionando seu primeiro lançamento</span></div>
+      </div>
+    </div>
+  </div>
+  </div><!-- /view-dashboard -->
+
+  <!-- ================= VIEW: LANÇAMENTOS ================= -->
+  <div id="view-lancamentos" class="view">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Receitas & Gastos</div>
+        <h2>Lançamentos</h2>
+      </div>
+    </div>
+    <div class="panel">
+      <div id="txList">
+        <div class="empty-note">Nenhum lançamento ainda. Toque no + para adicionar o primeiro.</div>
+      </div>
+    </div>
+  </div><!-- /view-lancamentos -->
+
+  <!-- ================= VIEW: CARTÕES ================= -->
+  <div id="view-cartoes" class="view">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Crédito & Débito</div>
+        <h2>Cartões</h2>
+      </div>
+    </div>
+    <div id="cardList">
+      <div class="empty-note">Nenhum cartão cadastrado. Toque no + para adicionar.</div>
+    </div>
+  </div><!-- /view-cartoes -->
+
+  <!-- ================= VIEW: CONTAS FIXAS ================= -->
+  <div id="view-contasfixas" class="view">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Recorrentes</div>
+        <h2>Contas fixas</h2>
+      </div>
+    </div>
+    <div class="panel">
+      <div id="fixasList">
+        <div class="empty-note">Nenhuma conta fixa cadastrada. Toque no + para adicionar (aluguel, internet, academia...).</div>
+      </div>
+    </div>
+  </div><!-- /view-contasfixas -->
+
+  <!-- ================= VIEW: DÍVIDAS ================= -->
+  <div id="view-dividas" class="view">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Entre pessoas</div>
+        <h2>Dívidas</h2>
+      </div>
+    </div>
+    <div class="seg" id="segDividaFiltro">
+      <button type="button" class="active" data-filtro="devo">📤 Eu devo</button>
+      <button type="button" data-filtro="me_devem">📥 Me devem</button>
+    </div>
+    <div class="panel">
+      <div id="dividasList">
+        <div class="empty-note">Nenhuma dívida por aqui.</div>
+      </div>
+    </div>
+  </div><!-- /view-dividas -->
+
+  <!-- ================= VIEW: MAIS (hub) ================= -->
+  <div id="view-mais" class="view">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Mais</div>
+        <h2>Outras áreas</h2>
+      </div>
+    </div>
+    <div class="grid" style="grid-template-columns:repeat(2,1fr);">
+      <div class="card" style="cursor:pointer; grid-column:1/-1; background:linear-gradient(135deg, var(--rose-soft), var(--sun-soft));" data-sub="assistente">
+        <div class="icon">🤖</div>
+        <div class="label">Pergunte sobre sua vida financeira</div>
+        <div class="value">Assistente</div>
+      </div>
+      <div class="card" style="cursor:pointer;" data-sub="caixinhas">
+        <div class="icon">🐷</div>
+        <div class="label">Reservas</div>
+        <div class="value">Caixinhas</div>
+      </div>
+      <div class="card" style="cursor:pointer;" data-sub="investimentos">
+        <div class="icon">📈</div>
+        <div class="label">Patrimônio</div>
+        <div class="value">Investimentos</div>
+      </div>
+      <div class="card" style="cursor:pointer;" data-sub="calendario">
+        <div class="icon">🗓️</div>
+        <div class="label">Agenda</div>
+        <div class="value">Calendário</div>
+      </div>
+      <div class="card" style="cursor:pointer;" data-sub="calculadora">
+        <div class="icon">🧮</div>
+        <div class="label">Ferramentas</div>
+        <div class="value">Calculadora</div>
+      </div>
+      <div class="card" style="cursor:pointer;" data-sub="relatorios">
+        <div class="icon">📊</div>
+        <div class="label">Análises</div>
+        <div class="value">Relatórios</div>
+      </div>
+      <div class="card" style="cursor:pointer;" data-sub="categorias">
+        <div class="icon">🏷️</div>
+        <div class="label">Personalizar</div>
+        <div class="value">Categorias</div>
+      </div>
+      <div class="card" style="cursor:pointer;" data-sub="configuracoes">
+        <div class="icon">⚙️</div>
+        <div class="label">Ajustes</div>
+        <div class="value">Configurações</div>
+      </div>
+    </div>
+  </div><!-- /view-mais -->
+
+  <!-- ================= VIEW: CAIXINHAS ================= -->
+  <div id="view-caixinhas" class="view">
+    <div class="section-head">
+      <div>
+        <button class="modal-close" style="position:static; font-size:16px;" data-sub-back="mais">←</button>
+        <div class="eyebrow" style="margin-top:6px;">Reservas</div>
+        <h2>Caixinhas</h2>
+      </div>
+    </div>
+    <div id="caixinhasList">
+      <div class="empty-note">Nenhuma caixinha ainda. Toque no + para criar sua primeira meta.</div>
+    </div>
+  </div><!-- /view-caixinhas -->
+
+  <!-- ================= VIEW: INVESTIMENTOS ================= -->
+  <div id="view-investimentos" class="view">
+    <div class="section-head">
+      <div>
+        <button class="modal-close" style="position:static; font-size:16px;" data-sub-back="mais">←</button>
+        <div class="eyebrow" style="margin-top:6px;">Patrimônio</div>
+        <h2>Investimentos</h2>
+      </div>
+    </div>
+    <div class="panel" style="margin-bottom:14px;">
+      <div class="label" style="margin-bottom:4px;">Total investido</div>
+      <div class="hero-value" style="font-size:28px;" id="totalInvestidoLabel">R$ 0,00</div>
+    </div>
+    <div class="panel">
+      <div id="investimentosList">
+        <div class="empty-note">Nenhum investimento cadastrado ainda.</div>
+      </div>
+    </div>
+  </div><!-- /view-investimentos -->
+
+  <!-- ================= VIEW: CALENDÁRIO ================= -->
+  <div id="view-calendario" class="view">
+    <div class="section-head">
+      <div>
+        <button class="modal-close" style="position:static; font-size:16px;" data-sub-back="mais">←</button>
+        <div class="eyebrow" style="margin-top:6px;">Agenda</div>
+        <h2>Calendário</h2>
+      </div>
+      <button id="btnAddAniversario" style="background:var(--stone); border:none; border-radius:999px; padding:8px 12px; font-size:11.5px; font-weight:700; color:var(--plum-ink); cursor:pointer;">🎂 + Aniversário</button>
+    </div>
+    <div class="panel" style="margin-bottom:14px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+        <button id="calPrev" style="background:var(--stone); border:none; width:34px; height:34px; border-radius:50%; font-size:16px; cursor:pointer;">‹</button>
+        <div class="display" id="calMesLabel" style="font-size:17px;"></div>
+        <button id="calNext" style="background:var(--stone); border:none; width:34px; height:34px; border-radius:50%; font-size:16px; cursor:pointer;">›</button>
+      </div>
+      <div class="cal-weekdays">
+        <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-legend">
+        <span><i class="dot-legend" style="background:var(--red);"></i> Vencida</span>
+        <span><i class="dot-legend" style="background:var(--rose-deep);"></i> A vencer</span>
+        <span><i class="dot-legend" style="background:var(--green);"></i> Receita</span>
+        <span><i class="dot-legend" style="background:var(--sun-deep);"></i> Aniversário</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="label" style="margin-bottom:10px;" id="calAgendaLabel">Eventos do dia</div>
+      <div id="calAgendaList"><div class="empty-note">Toque em um dia para ver os detalhes.</div></div>
+    </div>
+  </div><!-- /view-calendario -->
+
+  <!-- ================= VIEW: CALCULADORA ================= -->
+  <div id="view-calculadora" class="view">
+    <div class="section-head">
+      <div>
+        <button class="modal-close" style="position:static; font-size:16px;" data-sub-back="mais">←</button>
+        <div class="eyebrow" style="margin-top:6px;">Ferramentas</div>
+        <h2>Calculadora financeira</h2>
+      </div>
+    </div>
+
+    <div class="seg" id="segCalcModo" style="flex-wrap:wrap;">
+      <button type="button" class="active" data-modo="soma">➕ Soma</button>
+      <button type="button" data-modo="subtracao">➖ Subtração</button>
+      <button type="button" data-modo="percentual">％ %</button>
+    </div>
+    <div class="seg" id="segCalcModo2" style="flex-wrap:wrap;">
+      <button type="button" data-modo="desconto">🏷️ Desconto</button>
+      <button type="button" data-modo="jurossimples">📐 Juros simples</button>
+      <button type="button" data-modo="juroscompostos">📊 Juros compostos</button>
+      <button type="button" data-modo="dividir">🍽️ Dividir conta</button>
+    </div>
+
+    <div class="panel" id="calcSoma">
+      <div class="label" style="margin-bottom:8px;">Somar valores</div>
+      <div id="calcSomaLinhas"></div>
+      <button id="calcSomaAdd" style="background:var(--stone); border:none; border-radius:10px; padding:9px 14px; font-size:12.5px; font-weight:700; cursor:pointer; margin-top:6px;">+ Adicionar valor</button>
+      <div class="hero" style="margin-top:16px; padding:16px;">
+        <div class="hero-label">Total</div>
+        <div class="hero-value" style="font-size:28px;" id="calcSomaResultado">R$ 0,00</div>
+      </div>
+    </div>
+
+    <div class="panel hidden" id="calcSubtracao">
+      <div class="field"><label>Valor inicial (R$)</label><input type="number" id="subValorInicial" step="0.01" placeholder="Ex: 500"></div>
+      <div class="label" style="margin-bottom:8px;">Subtrair</div>
+      <div id="calcSubLinhas"></div>
+      <button id="calcSubAdd" style="background:var(--stone); border:none; border-radius:10px; padding:9px 14px; font-size:12.5px; font-weight:700; cursor:pointer; margin-top:6px;">+ Adicionar valor</button>
+      <div class="hero" style="margin-top:16px; padding:16px;">
+        <div class="hero-label">Resultado</div>
+        <div class="hero-value" style="font-size:28px;" id="calcSubResultado">R$ 0,00</div>
+      </div>
+    </div>
+
+    <div class="panel hidden" id="calcPercentual">
+      <div class="field"><label>Porcentagem (%)</label><input type="number" id="pctPercentual" step="0.01" placeholder="Ex: 15"></div>
+      <div class="field"><label>Sobre o valor (R$)</label><input type="number" id="pctValor" step="0.01" placeholder="Ex: 200"></div>
+      <div class="hero" style="margin-top:6px; padding:16px;">
+        <div class="hero-label">Resultado</div>
+        <div class="hero-value" style="font-size:28px;" id="pctResultado">R$ 0,00</div>
+      </div>
+    </div>
+
+    <div class="panel hidden" id="calcDesconto">
+      <div class="field"><label>Valor original (R$)</label><input type="number" id="dscValor" step="0.01" placeholder="Ex: 150"></div>
+      <div class="field"><label>Desconto (%)</label><input type="number" id="dscPercentual" step="0.01" placeholder="Ex: 10"></div>
+      <div class="hero" style="margin-top:6px; padding:16px;">
+        <div class="hero-label">Valor com desconto</div>
+        <div class="hero-value" style="font-size:28px;" id="dscResultado">R$ 0,00</div>
+        <div class="chip" style="margin-top:10px;">Você economiza: <span id="dscEconomia">R$ 0,00</span></div>
+      </div>
+    </div>
+
+    <div class="panel hidden" id="calcJurosSimples">
+      <div class="field"><label>Capital inicial (R$)</label><input type="number" id="jsCapital" step="0.01" placeholder="Ex: 1000"></div>
+      <div class="field"><label>Taxa (% ao mês)</label><input type="number" id="jsTaxa" step="0.01" placeholder="Ex: 2"></div>
+      <div class="field"><label>Período (meses)</label><input type="number" id="jsPeriodo" step="1" placeholder="Ex: 12"></div>
+      <div class="hero" style="margin-top:6px; padding:16px;">
+        <div class="hero-label">Montante final</div>
+        <div class="hero-value" style="font-size:28px;" id="jsResultado">R$ 0,00</div>
+        <div class="chip" style="margin-top:10px;">Juros: <span id="jsJuros">R$ 0,00</span></div>
+      </div>
+    </div>
+
+    <div class="panel hidden" id="calcJurosCompostos">
+      <div class="field"><label>Capital inicial (R$)</label><input type="number" id="jcCapital" step="0.01" placeholder="Ex: 1000"></div>
+      <div class="field"><label>Taxa (% ao mês)</label><input type="number" id="jcTaxa" step="0.01" placeholder="Ex: 2"></div>
+      <div class="field"><label>Período (meses)</label><input type="number" id="jcPeriodo" step="1" placeholder="Ex: 12"></div>
+      <div class="hero" style="margin-top:6px; padding:16px;">
+        <div class="hero-label">Montante final</div>
+        <div class="hero-value" style="font-size:28px;" id="jcResultado">R$ 0,00</div>
+        <div class="chip" style="margin-top:10px;">Juros: <span id="jcJuros">R$ 0,00</span></div>
+      </div>
+    </div>
+
+    <div class="panel hidden" id="calcDividir">
+      <div class="field"><label>Valor total da conta (R$)</label><input type="number" id="dvdValor" step="0.01" placeholder="Ex: 180"></div>
+      <div class="field"><label>Número de pessoas</label><input type="number" id="dvdPessoas" step="1" min="1" placeholder="Ex: 4"></div>
+      <div class="field"><label>Taxa de serviço (%) — opcional</label><input type="number" id="dvdTaxa" step="0.01" placeholder="Ex: 10"></div>
+      <div class="hero" style="margin-top:6px; padding:16px;">
+        <div class="hero-label">Cada pessoa paga</div>
+        <div class="hero-value" style="font-size:28px;" id="dvdResultado">R$ 0,00</div>
+      </div>
+    </div>
+  </div><!-- /view-calculadora -->
+
+  <!-- ================= VIEW: RELATÓRIOS ================= -->
+  <div id="view-relatorios" class="view">
+    <div class="section-head">
+      <div>
+        <button class="modal-close" style="position:static; font-size:16px;" data-sub-back="mais">←</button>
+        <div class="eyebrow" style="margin-top:6px;">Análises</div>
+        <h2>Relatórios</h2>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:14px;">
+      <div class="label" style="margin-bottom:10px;">Receitas x Despesas — últimos 6 meses</div>
+      <div class="chart-box"><canvas id="chartReceitasDespesas"></canvas></div>
+    </div>
+
+    <div class="panel" style="margin-bottom:14px;">
+      <div class="label" style="margin-bottom:10px;">Gastos por cartão — mês atual</div>
+      <div class="empty-note" id="chartCartoesEmptyNote">Nenhuma compra no cartão este mês ainda.</div>
+      <div class="chart-box"><canvas id="chartGastosCartao"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <div class="label" style="margin-bottom:10px;">Evolução do patrimônio</div>
+      <div class="empty-note" id="chartPatrimonioEmptyNote">Ainda não há histórico suficiente — volte em alguns dias.</div>
+      <div class="chart-box"><canvas id="chartPatrimonioHistorico"></canvas></div>
+    </div>
+  </div><!-- /view-relatorios -->
+
+  <!-- ================= VIEW: CATEGORIAS ================= -->
+  <div id="view-categorias" class="view">
+    <div class="section-head">
+      <div>
+        <button class="modal-close" style="position:static; font-size:16px;" data-sub-back="mais">←</button>
+        <div class="eyebrow" style="margin-top:6px;">Personalizar</div>
+        <h2>Categorias</h2>
+      </div>
+    </div>
+    <div class="panel" style="margin-bottom:14px;">
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="catNovoEmoji" placeholder="🙂" maxlength="2" style="width:56px; text-align:center; padding:12px; border-radius:10px; border:1.5px solid var(--stone-dark); background:var(--cream); font-size:16px;">
+        <input type="text" id="catNovoNome" placeholder="Nova categoria" style="flex:1; padding:12px 14px; border-radius:10px; border:1.5px solid var(--stone-dark); background:var(--cream); font-family:'Manrope',sans-serif; font-size:14px;">
+        <button id="btnAddCategoria" style="background:var(--plum-ink); color:var(--sun-soft); border:none; border-radius:10px; padding:0 16px; font-weight:700; cursor:pointer;">+</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div id="categoriasList"></div>
+    </div>
+  </div><!-- /view-categorias -->
+
+  <!-- ================= VIEW: CONFIGURAÇÕES ================= -->
+  <div id="view-configuracoes" class="view">
+    <div class="section-head">
+      <div>
+        <button class="modal-close" style="position:static; font-size:16px;" data-sub-back="mais">←</button>
+        <div class="eyebrow" style="margin-top:6px;">Ajustes</div>
+        <h2>Configurações</h2>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div><h2 style="font-size:15px;">Aparência</h2></div></div>
+      <div class="panel" style="display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <div class="tx-desc" style="font-size:14px;">Modo escuro</div>
+          <div class="tx-meta">Deixa a tela mais confortável à noite</div>
+        </div>
+        <label style="position:relative; display:inline-block; width:48px; height:28px;">
+          <input type="checkbox" id="toggleModoEscuro" style="opacity:0; width:0; height:0;">
+          <span id="toggleModoEscuroTrack" style="position:absolute; inset:0; background:var(--stone-dark); border-radius:999px; transition:.2s; cursor:pointer;"></span>
+          <span id="toggleModoEscuroKnob" style="position:absolute; left:3px; top:3px; width:22px; height:22px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 4px rgba(0,0,0,0.25); pointer-events:none;"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div><h2 style="font-size:15px;">Contas bancárias</h2></div></div>
+      <div class="panel" style="margin-bottom:10px;">
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="cbaNome" placeholder="Nome da conta (Ex: Nubank, Carteira)" style="flex:1; padding:12px 14px; border-radius:10px; border:1.5px solid var(--stone-dark); background:var(--cream); font-family:'Manrope',sans-serif; font-size:14px;">
+          <input type="number" id="cbaSaldo" step="0.01" placeholder="Saldo" style="width:110px; padding:12px 10px; border-radius:10px; border:1.5px solid var(--stone-dark); background:var(--cream); font-family:'Manrope',sans-serif; font-size:14px;">
+          <button id="btnAddContaBancaria" style="background:var(--plum-ink); color:var(--sun-soft); border:none; border-radius:10px; padding:0 16px; font-weight:700; cursor:pointer;">+</button>
+        </div>
+      </div>
+      <div class="panel"><div id="contasBancariasList"><div class="empty-note">Nenhuma conta cadastrada ainda.</div></div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div><h2 style="font-size:15px;">Backup</h2></div></div>
+      <div class="panel" style="display:flex; gap:10px;">
+        <button id="btnExportar" style="flex:1; background:var(--stone); border:none; border-radius:10px; padding:12px; font-weight:700; font-size:13px; cursor:pointer;">⬇️ Exportar dados</button>
+        <button id="btnImportar" style="flex:1; background:var(--stone); border:none; border-radius:10px; padding:12px; font-weight:700; font-size:13px; cursor:pointer;">⬆️ Importar dados</button>
+        <input type="file" id="inputImportar" accept="application/json" class="hidden">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div><h2 style="font-size:15px; color:var(--red);">Zona de perigo</h2></div></div>
+      <div class="panel">
+        <button id="btnLimparDados" style="width:100%; background:transparent; border:1.5px solid var(--red); color:var(--red); border-radius:10px; padding:12px; font-weight:700; font-size:13px; cursor:pointer;">🗑️ Apagar todos os dados</button>
+      </div>
+    </div>
+  </div><!-- /view-configuracoes -->
+
+  <!-- ================= VIEW: ASSISTENTE ================= -->
+  <div id="view-assistente" class="view">
+    <div class="section-head">
+      <div>
+        <button class="modal-close" style="position:static; font-size:16px;" data-sub-back="mais">←</button>
+        <div class="eyebrow" style="margin-top:6px;">IA financeira</div>
+        <h2>Assistente</h2>
+      </div>
+    </div>
+    <div class="panel" style="margin-bottom:12px;">
+      <div id="assistenteChips" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;"></div>
+    </div>
+    <div class="panel" style="min-height:50vh; display:flex; flex-direction:column;">
+      <div id="assistenteChat" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:12px; max-height:52vh;"></div>
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="assistenteInput" placeholder="Pergunte algo, ex: quanto posso gastar?" style="flex:1; padding:12px 14px; border-radius:999px; border:1.5px solid var(--stone-dark); background:var(--cream); font-family:'Manrope',sans-serif; font-size:14px;">
+        <button id="assistenteEnviar" style="background:var(--plum-ink); color:var(--sun-soft); border:none; width:44px; height:44px; border-radius:50%; font-size:16px; cursor:pointer;">➤</button>
+      </div>
+    </div>
+  </div><!-- /view-assistente -->
+
+</div><!-- /.app -->
+
+<!-- ================= TAB BAR ================= -->
+<nav class="tabbar">
+  <button class="tab-btn active" data-view="dashboard"><span class="tab-icon">🏠</span>Início</button>
+  <button class="tab-btn" data-view="lancamentos"><span class="tab-icon">🧾</span>Lanç.</button>
+  <button class="tab-btn" data-view="cartoes"><span class="tab-icon">💳</span>Cartões</button>
+  <button class="tab-btn" data-view="contasfixas"><span class="tab-icon">📅</span>Fixas</button>
+  <button class="tab-btn" data-view="dividas"><span class="tab-icon">🤝</span>Dívidas</button>
+  <button class="tab-btn" data-view="mais"><span class="tab-icon">✨</span>Mais</button>
+</nav>
+
+<button class="fab" id="fabAdd" title="Adicionar">+</button>
+
+<!-- ================= MODAL: TRANSAÇÃO ================= -->
+<div class="modal-overlay" id="modalTransacao">
+  <div class="modal-sheet">
+    <button class="modal-close" data-close="modalTransacao">✕</button>
+    <h3>Novo lançamento</h3>
+    <div class="seg" id="segTipo">
+      <button type="button" class="active" data-tipo="despesa">🧾 Despesa</button>
+      <button type="button" data-tipo="receita">💵 Receita</button>
+    </div>
+
+    <div class="field">
+      <label>Descrição</label>
+      <input type="text" id="txDescricao" placeholder="Ex: Drogasil, Salário, iFood...">
+    </div>
+    <div class="hint hidden" id="txAprendizadoHint"></div>
+
+    <div class="field">
+      <label>Valor (R$)</label>
+      <input type="number" id="txValor" step="0.01" min="0" placeholder="0,00">
+    </div>
+
+    <div class="field">
+      <label>Data</label>
+      <input type="date" id="txData">
+    </div>
+
+    <div class="field" id="fieldCategoriaDespesa">
+      <label>Categoria</label>
+      <select id="txCategoriaDespesa"></select>
+    </div>
+    <div class="field hidden" id="fieldCategoriaReceita">
+      <label>Origem</label>
+      <select id="txCategoriaReceita">
+        <option>Salário</option><option>Pix recebido</option><option>Dinheiro</option>
+        <option>Transferência</option><option>Investimentos</option><option>Renda extra</option><option>Outros</option>
+      </select>
+    </div>
+
+    <div class="field hidden" id="fieldFormaPagamento">
+      <label>Forma de pagamento</label>
+      <select id="txCartao">
+        <option value="">Conta / dinheiro</option>
+      </select>
+    </div>
+
+    <div class="checkline hidden" id="lineParcelado">
+      <input type="checkbox" id="txParcelado"> <label for="txParcelado" style="margin:0;text-transform:none;font-size:13.5px;color:var(--plum-ink);">Compra parcelada</label>
+    </div>
+    <div class="field hidden" id="fieldParcelas">
+      <label>Número de parcelas</label>
+      <input type="number" id="txNumParcelas" min="2" max="48" value="2">
+    </div>
+
+    <div class="checkline hidden" id="lineDividir">
+      <input type="checkbox" id="txDividir"> <label for="txDividir" style="margin:0;text-transform:none;font-size:13.5px;color:var(--plum-ink);">Esta despesa será dividida?</label>
+    </div>
+    <div class="field hidden" id="fieldParticipantes">
+      <label>Quem participa? (nomes separados por vírgula)</label>
+      <input type="text" id="txParticipantes" placeholder="Ex: Marina, João">
+      <div class="hint" id="txDivisaoPreview" style="margin-top:8px;"></div>
+    </div>
+
+    <button class="btn-primary" id="btnSalvarTx">Salvar lançamento</button>
+  </div>
+</div>
+
+<!-- ================= MODAL: CARTÃO ================= -->
+<div class="modal-overlay" id="modalCartao">
+  <div class="modal-sheet">
+    <button class="modal-close" data-close="modalCartao">✕</button>
+    <h3 id="modalCartaoTitulo">Novo cartão</h3>
+    <div class="seg" id="segCartaoTipo">
+      <button type="button" class="active" data-tipo="credito">💳 Crédito</button>
+      <button type="button" data-tipo="debito">🏧 Débito</button>
+    </div>
+    <div class="field">
+      <label>Banco</label>
+      <input type="text" id="cbBanco" placeholder="Ex: Nubank, Caixa, Mercado Pago">
+    </div>
+    <div class="field">
+      <label>Apelido do cartão</label>
+      <input type="text" id="cbNome" placeholder="Ex: Cartão principal">
+    </div>
+    <div class="field">
+      <label>Bandeira</label>
+      <select id="cbBandeira">
+        <option>Visa</option><option>Mastercard</option><option>Elo</option><option>Amex</option><option>Outra</option>
+      </select>
+    </div>
+    <div class="field">
+      <label id="cbLimiteLabel">Limite total (R$)</label>
+      <input type="number" id="cbLimite" step="0.01" min="0" placeholder="0,00">
+    </div>
+    <div class="field" id="fieldCbFechamento">
+      <label>Dia de fechamento</label>
+      <input type="number" id="cbFechamento" min="1" max="31" placeholder="Ex: 20">
+    </div>
+    <div class="field" id="fieldCbVencimento">
+      <label>Dia de vencimento</label>
+      <input type="number" id="cbVencimento" min="1" max="31" placeholder="Ex: 28">
+    </div>
+    <button class="btn-primary" id="btnSalvarCartao">Salvar cartão</button>
+  </div>
+</div>
+
+<!-- ================= MODAL: CONTA FIXA ================= -->
+<div class="modal-overlay" id="modalContaFixa">
+  <div class="modal-sheet">
+    <button class="modal-close" data-close="modalContaFixa">✕</button>
+    <h3>Nova conta fixa</h3>
+    <div class="field">
+      <label>Nome</label>
+      <input type="text" id="cfNome" placeholder="Ex: Aluguel, Internet, Academia">
+    </div>
+    <div class="field">
+      <label>Valor (R$)</label>
+      <input type="number" id="cfValor" step="0.01" min="0" placeholder="0,00">
+    </div>
+    <div class="field">
+      <label>Categoria</label>
+      <select id="cfCategoria"></select>
+    </div>
+    <div class="field">
+      <label>Dia de vencimento</label>
+      <input type="number" id="cfDiaVencimento" min="1" max="31" placeholder="Ex: 10">
+    </div>
+    <button class="btn-primary" id="btnSalvarContaFixa">Salvar conta fixa</button>
+  </div>
+</div>
+
+<!-- ================= MODAL: DÍVIDA ================= -->
+<div class="modal-overlay" id="modalDivida">
+  <div class="modal-sheet">
+    <button class="modal-close" data-close="modalDivida">✕</button>
+    <h3>Nova dívida</h3>
+    <div class="seg" id="segDividaTipo">
+      <button type="button" class="active" data-tipo="devo">📤 Eu devo</button>
+      <button type="button" data-tipo="me_devem">📥 Me devem</button>
+    </div>
+    <div class="field">
+      <label>Nome da pessoa</label>
+      <input type="text" id="dvPessoa" placeholder="Ex: Marina">
+    </div>
+    <div class="field">
+      <label>Telefone (opcional)</label>
+      <input type="text" id="dvTelefone" placeholder="Ex: (11) 99999-9999">
+    </div>
+    <div class="field">
+      <label>Valor (R$)</label>
+      <input type="number" id="dvValor" step="0.01" min="0" placeholder="0,00">
+    </div>
+    <div class="checkline">
+      <input type="checkbox" id="dvParcelar"> <label for="dvParcelar" style="margin:0;text-transform:none;font-size:13.5px;color:var(--plum-ink);">Parcelar esta dívida?</label>
+    </div>
+    <div class="field hidden" id="fieldDvParcelas">
+      <label>Número de parcelas</label>
+      <input type="number" id="dvNumParcelas" min="2" max="48" value="2">
+      <div class="hint" id="dvParcelasPreview" style="margin-top:8px;"></div>
+    </div>
+    <div class="field">
+      <label>Motivo</label>
+      <input type="text" id="dvMotivo" placeholder="Ex: Empréstimo, jantar, viagem">
+    </div>
+    <div class="field">
+      <label>Data</label>
+      <input type="date" id="dvData">
+    </div>
+    <div class="field" id="fieldDvVencimento">
+      <label>Vencimento (opcional)</label>
+      <input type="date" id="dvVencimento">
+    </div>
+    <div class="field">
+      <label>Observações</label>
+      <textarea id="dvObservacoes" rows="2" placeholder="Opcional"></textarea>
+    </div>
+    <button class="btn-primary" id="btnSalvarDivida">Salvar dívida</button>
+  </div>
+</div>
+
+<!-- ================= MODAL: CAIXINHA ================= -->
+<div class="modal-overlay" id="modalCaixinha">
+  <div class="modal-sheet">
+    <button class="modal-close" data-close="modalCaixinha">✕</button>
+    <h3>Nova caixinha</h3>
+    <div class="field">
+      <label>Nome</label>
+      <input type="text" id="cxNome" placeholder="Ex: Viagem, Reserva de emergência">
+    </div>
+    <div class="field">
+      <label>Objetivo</label>
+      <input type="text" id="cxObjetivo" placeholder="Ex: Viagem para a praia em dezembro">
+    </div>
+    <div class="field">
+      <label>Valor já guardado (R$)</label>
+      <input type="number" id="cxValorAtual" step="0.01" min="0" placeholder="0,00">
+    </div>
+    <div class="field">
+      <label>Valor da meta (R$)</label>
+      <input type="number" id="cxValorMeta" step="0.01" min="0" placeholder="0,00">
+    </div>
+    <button class="btn-primary" id="btnSalvarCaixinha">Salvar caixinha</button>
+  </div>
+</div>
+
+<!-- ================= MODAL: INVESTIMENTO ================= -->
+<div class="modal-overlay" id="modalInvestimento">
+  <div class="modal-sheet">
+    <button class="modal-close" data-close="modalInvestimento">✕</button>
+    <h3>Novo investimento</h3>
+    <div class="field">
+      <label>Tipo</label>
+      <select id="ivTipo">
+        <option>Tesouro Direto</option><option>CDB</option><option>Fundos Imobiliários</option>
+        <option>Ações</option><option>Poupança</option><option>Outros</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Nome / apelido</label>
+      <input type="text" id="ivNome" placeholder="Ex: Tesouro Selic 2029">
+    </div>
+    <div class="field">
+      <label>Valor aplicado (R$)</label>
+      <input type="number" id="ivValorAplicado" step="0.01" min="0" placeholder="0,00">
+    </div>
+    <div class="field">
+      <label>Valor atual (R$)</label>
+      <input type="number" id="ivValorAtual" step="0.01" min="0" placeholder="0,00">
+    </div>
+    <button class="btn-primary" id="btnSalvarInvestimento">Salvar investimento</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
